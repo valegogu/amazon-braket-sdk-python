@@ -472,7 +472,7 @@ def _create_annealing_device_params(device_params, device_arn):
         device_params = device_params.dict()
 
     device_level_parameters = device_params.get("deviceLevelParameters", None) or device_params.get(
-        "providerLevelParameters", None
+        "providerLevelParameters", {}
     )
 
     # deleting since it may be the old version
@@ -481,7 +481,7 @@ def _create_annealing_device_params(device_params, device_arn):
 
     if "Advantage" in device_arn:
         device_level_parameters = DwaveAdvantageDeviceLevelParameters.parse_obj(
-            device_level_parameters
+            device_level_parameters,
         )
         return DwaveAdvantageDeviceParameters(deviceLevelParameters=device_level_parameters)
     elif "2000Q" in device_arn:
