@@ -11,7 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 
-from typing import Any, Dict, List, Optional, Sequence, Union
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
 from braket.circuits.free_parameter import FreeParameter
 from braket.circuits.parameterizable import Parameterizable
@@ -88,7 +90,7 @@ class Noise(QuantumOperator):
         raise NotImplementedError
 
     @classmethod
-    def register_noise(cls, noise: "Noise"):
+    def register_noise(cls, noise: Type[Noise]):
         """Register a noise implementation by adding it into the Noise class.
 
         Args:
