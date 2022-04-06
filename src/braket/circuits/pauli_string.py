@@ -109,6 +109,15 @@ class PauliString:
     def __repr__(self):
         return self._str
 
+    def __eq__(self, other):
+        if not isinstance(other, PauliString):
+            return NotImplemented
+        return (
+            self._str == other._str
+            and self._phase == other._phase
+            and self._indices == other._indices
+        )
+    
     @staticmethod
     def _split(pauli_word: str) -> Tuple[complex, str]:
         index = 0
