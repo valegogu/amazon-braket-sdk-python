@@ -26,7 +26,7 @@ from braket.circuits.noise_model import (
     QubitInitializationCriteria,
     UnitaryGateCriteria,
 )
-from braket.circuits.noises import Depolarizing, PauliChannel, TwoQubitDepolarizing
+from braket.circuits.noises import BitFlip, Depolarizing, PauliChannel, TwoQubitDepolarizing
 
 
 def h_unitary():
@@ -196,7 +196,7 @@ def test_apply():
         .add_noise(Depolarizing(0.06), ObservableCriteria(Observable.Z, 0))
         .add_noise(Depolarizing(0.09), QubitInitializationCriteria(0))
     )
-    layer1 = Circuit().h(0).cnot(0, 1)
+    layer1 = Circuit().h(0).cnot(0, 1).sample(Observable.Z(), 0)
     layer2 = Circuit().unitary([0], h_unitary().to_matrix())
     circuit = layer1 + layer2
     noisy_circuit_from_circuit = noise_model.apply(circuit)
@@ -211,6 +211,7 @@ def test_apply():
         .unitary([0], h_unitary().to_matrix())
         .depolarizing(0, 0.10)
         .apply_readout_noise(Depolarizing(0.06), 0)
+        .sample(Observable.Z(), 0)
     )
     assert noisy_circuit_from_circuit == expected_circuit
 
@@ -341,18 +342,18 @@ def test_apply_initialization_noise(noise_model, input_circuit, expected_circuit
         (
             # model
             NoiseModel().add_noise(Depolarizing(0.01), ObservableCriteria(Observable.Z)),
-            # input circuit has implicit observables on both qubits
+            # input circuit has no explicit observables
             Circuit().h(0).cnot(0, 1),
-            # expected circuit has noise applied on both qubits
-            Circuit().h(0).cnot(0, 1).depolarizing(0, 0.01).depolarizing(1, 0.01),
+            # expected circuit has no noise applied
+            Circuit().h(0).cnot(0, 1),
         ),
         (
             # model has observable criteria only on one qubit
             NoiseModel().add_noise(Depolarizing(0.01), ObservableCriteria(Observable.Z, 0)),
-            # input circuit has implicit observables on both qubits
+            # input circuit has no explicit observables
             Circuit().h(0).cnot(0, 1),
-            # expected circuit has noise applied to only one qubit
-            Circuit().h(0).cnot(0, 1).depolarizing(0, 0.01),
+            # expected circuit has no noise applied
+            Circuit().h(0).cnot(0, 1),
         ),
         (
             # model
@@ -391,8 +392,8 @@ def test_apply_initialization_noise(noise_model, input_circuit, expected_circuit
             NoiseModel().add_noise(Depolarizing(0.01), ObservableCriteria(None, None)),
             # input circuit doesn't contain observables
             Circuit().h(0).cnot(0, 1),
-            # expected circuit has noise applied
-            Circuit().h(0).cnot(0, 1).depolarizing(0, 0.01).depolarizing(1, 0.01),
+            # expected circuit has no noise applied
+            Circuit().h(0).cnot(0, 1),
         ),
         (
             # model uses qubit criteria on non-related qubits
@@ -424,6 +425,37 @@ def test_apply_initialization_noise(noise_model, input_circuit, expected_circuit
             .depolarizing(0, 0.01)
             .depolarizing(0, 0.02)
             .sample(Observable.X(), 0),
+        ),
+        (
+            # model uses observable criteria with any observable/qubit.
+            NoiseModel().add_noise(BitFlip(0.01), ObservableCriteria(None, None)),
+            # input circuit contains many different types of result types for qubit 0
+            Circuit()
+            .h(0)
+            .cnot(0, 1)
+            .probability(target=[0, 1])
+            .probability(target=0)
+            .expectation(observable=Observable.Z(), target=0)
+            .sample(observable=Observable.X(), target=0)
+            .variance(observable=Observable.Z(), target=0),
+            # expected circuit only applies BitFlip once to qubit 0
+            Circuit()
+            .h(0)
+            .cnot(0, 1)
+            .probability(target=[0, 1])
+            .probability(target=0)
+            .expectation(observable=Observable.Z(), target=0)
+            .sample(observable=Observable.X(), target=0)
+            .variance(observable=Observable.Z(), target=0)
+            .apply_readout_noise(BitFlip(0.01), 0),
+        ),
+        (
+            # model uses observable criteria with any observable/qubit.
+            NoiseModel().add_noise(BitFlip(0.01), ObservableCriteria(None, None)),
+            # input circuit only has a probability result type
+            Circuit().h(0).cnot(0, 1).probability(target=[0, 1]).probability(target=0),
+            # expected circuit has no noise applied
+            Circuit().h(0).cnot(0, 1).probability(target=[0, 1]).probability(target=0),
         ),
     ],
 )
